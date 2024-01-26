@@ -33,8 +33,11 @@ def extract_book_data(soup):
     price_including_tax = items['Price (incl. tax)']
     price_excluding_tax = items['Price (excl. tax)']
     number_available = items['Availability']
-    product_description_div = soup.find('div', id="product_description")
-    product_description = product_description_div.find_next_sibling('p').string
+    if soup.find('div', id="product_description"):
+        product_description_div = soup.find('div', id="product_description")
+        product_description = product_description_div.find_next_sibling('p').string
+    else:
+        product_description = ""
     category_list = soup.find('ul', class_='breadcrumb')
     category = category_list.find_all('a')[-1].string
     rate = soup.find('p', class_=re.compile(r'star-rating'))

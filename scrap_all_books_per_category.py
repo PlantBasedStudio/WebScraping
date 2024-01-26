@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 from datetime import date
 from urllib.parse import urljoin
 
-
 def scrap(url_link):
     response = requests.get(url_link)
     if not response.ok:
@@ -15,13 +14,21 @@ def scrap(url_link):
         return soup_response
 
 
-url = "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/index.html"
+url = "https://books.toscrape.com/index.html"
+base_url = "https://books.toscrape.com/"
 
-
+cat_links = []
+cat_books = []
 books = []
 
+def transform_url(base_url, relative_url):
+    parts = relative_url.split('/')
+    book_name = parts[3]
+    final_url = urljoin(base_url, f'/catalogue/{book_name}/index.html')
+    return final_url
 
 def extract_book_data(soup, url):
+
     print("Scrap d'un livre")
     items = {}
     trs = soup.find_all('tr')
@@ -37,7 +44,6 @@ def extract_book_data(soup, url):
     price_including_tax = items['Price (incl. tax)']
     price_excluding_tax = items['Price (excl. tax)']
     number_available = items['Availability']
-    product_description_div = soup.find('div', id="product_description")
     if soup.find('div', id="product_description"):
         product_description_div = soup.find('div', id="product_description")
         product_description = product_description_div.find_next_sibling('p').string
@@ -63,21 +69,9 @@ def extract_book_data(soup, url):
     }
     print("Scrap de " + book_data_dict['title'] + " terminé.")
     books.append(book_data_dict)
-
-
-soup_page = scrap(url)
-
-books_links = []
-
-
-def transform_url(base_url, relative_url):
-    parts = relative_url.split('/')
-    book_name = parts[3]
-    final_url = urljoin(base_url, f'/catalogue/{book_name}/index.html')
-    return final_url
-
-
+    return book_data_dict
 def scrap_links_in_page(url_link):
+
     soup = scrap(url_link)
     articles = soup.find_all('article', class_='product_pod')
     for article in articles:
@@ -87,13 +81,6 @@ def scrap_links_in_page(url_link):
         books_links.append(complete_link)
 
 
-scrap_links_in_page(url)
-
-
-new_extend_link = 'index.html'
-new_link = url
-#
-#
 def detect_pages(new_link):
     print("Detection des pages")
     soup = scrap(new_link)
@@ -109,33 +96,53 @@ def detect_pages(new_link):
         return False
 
 
-while detect_pages(new_link):
-    soup = scrap(new_link)
-    print("On cherche le lien")
-    li = soup.find('li', class_="next")
-    print("Le lien est bon")
-    a = li.find('a').get('href')
-    print("Lien :" + str(a))
-    print("extension :" + new_extend_link)
-    new_link = new_link.replace(new_extend_link, a)
-    new_extend_link = a
-    print("Nouvelle extension de lien : " + new_extend_link)
-    print("Nouveau lien : "  + new_link)
-    scrap_links_in_page(new_link)
+def scrap_all_category(url_link):
+    soup = scrap(url_link)
+    div = soup.find('div', class_='side_categories')
+    li = div.find('li')
+    ul = li.find('ul')
+    link = ul.find_all('a')
+    for href in link:
+        complete_link = (base_url + href.get('href'))
+        cat_links.append(complete_link)
 
-for book in books_links:
-    extract_book_data(scrap(book), book)
+scrap_all_category(url)
+
+for cat in cat_links:
+    books_links = []
+    all_books_in_this_cat = []
+    new_link = cat
+    new_extend_link = 'index.html'
+    scrap_links_in_page(new_link)
+    while detect_pages(new_link):
+        soup = scrap(new_link)
+        print("On cherche le lien")
+        li = soup.find('li', class_="next")
+        print("Le lien est bon")
+        a = li.find('a').get('href')
+        print("Lien :" + str(a))
+        print("extension :" + new_extend_link)
+        new_link = new_link.replace(new_extend_link, a)
+        new_extend_link = a
+        print("Nouvelle extension de lien : " + new_extend_link)
+        print("Nouveau lien : " + new_link)
+        scrap_links_in_page(new_link)
+    all_books_in_this_cat.append(books_links)
+    cat_books.append(all_books_in_this_cat)
 
 # CSV part
-print("Génération d'un fichier excel")
-header = books[0].keys()
+
+header = books[[0][0]].keys()
 today = str(date.today())
 
-with open(books[0]['category'].replace(" ", "_") + "_" + today + "_data.csv", "w", newline='', encoding='utf-8') as file_csv:
-    writer = csv.writer(file_csv, delimiter=",")
-    writer.writerow(header)
-    for book in books:
-        line = book.values()
-        writer.writerow(line)
-
+for categories in cat_books:
+    print("Génération d'un fichier excel")
+    with open("Category_" + extract_book_data(categories)['category'] + today + "_data.csv", "w", newline='', encoding='utf-8') as file_csv:
+        writer = csv.writer(file_csv, delimiter=",")
+        header = extract_book_data(categories).keys()
+        writer.writerow(header)
+        for book_group in categories:
+            for book in book_group:
+                line = extract_book_data(scrap(book), book)
+                writer.writerow(line)
     print("Votre fichier Excel est prêt")
