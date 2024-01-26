@@ -2,6 +2,7 @@ import re
 import csv
 import requests
 from bs4 import BeautifulSoup
+from datetime import date
 
 
 def scrap(url_link):
@@ -59,16 +60,12 @@ def extract_book_data(soup):
 soup_data = scrap(url)
 book_data = extract_book_data(soup_data)
 
-
 # CSV part
-header = []
-for key in book_data:
-    header.append(key)
+header = book_data.keys()
+line = book_data.values()
+today = str(date.today())
 
-with open("data.csv", "w") as file_csv:
+with open(book_data['title'].replace(" ", "_") + "_" + today + "_data.csv", "w", newline='') as file_csv:
     writer = csv.writer(file_csv, delimiter=",")
-    writer.writerow(header)
-    line = []
-    for value in book_data.values():
-        line.append(value)
-    writer.writerow(line)# writer.writerow(line)
+    datas = [header, line]
+    writer.writerows(datas)
