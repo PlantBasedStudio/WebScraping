@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from datetime import date
 from urllib.parse import urljoin
 
+
 def scrap(url_link):
     response = requests.get(url_link)
     if not response.ok:
@@ -21,14 +22,15 @@ cat_links = []
 cat_books = []
 books = []
 
+
 def transform_url(base_url, relative_url):
     parts = relative_url.split('/')
     book_name = parts[3]
     final_url = urljoin(base_url, f'/catalogue/{book_name}/index.html')
     return final_url
 
-def extract_book_data(soup, url):
 
+def extract_book_data(soup, url):
     print("Scrap d'un livre")
     items = {}
     trs = soup.find_all('tr')
@@ -70,8 +72,9 @@ def extract_book_data(soup, url):
     print("Scrap de " + book_data_dict['title'] + " terminé.")
     books.append(book_data_dict)
     return book_data_dict
-def scrap_links_in_page(url_link):
 
+
+def scrap_links_in_page(url_link):
     soup = scrap(url_link)
     articles = soup.find_all('article', class_='product_pod')
     for article in articles:
@@ -106,7 +109,9 @@ def scrap_all_category(url_link):
         complete_link = (base_url + href.get('href'))
         cat_links.append(complete_link)
 
+
 scrap_all_category(url)
+
 
 for cat in cat_links:
     books_links = []
@@ -132,17 +137,19 @@ for cat in cat_links:
 
 # CSV part
 
-header = books[[0][0]].keys()
+
 today = str(date.today())
 
 for categories in cat_books:
     print("Génération d'un fichier excel")
-    with open("Category_" + extract_book_data(categories)['category'] + today + "_data.csv", "w", newline='', encoding='utf-8') as file_csv:
-        writer = csv.writer(file_csv, delimiter=",")
-        header = extract_book_data(categories).keys()
-        writer.writerow(header)
-        for book_group in categories:
+
+    for book_group in categories:
+        with open("Category_" + extract_book_data(scrap(book_group[0]), book_group)['category'] + today + "_data.csv", "w",
+                  newline='', encoding='utf-8') as file_csv:
+            writer = csv.writer(file_csv, delimiter=",")
+            header = extract_book_data(scrap(book_group[0]), book_group).keys()
+            writer.writerow(header)
             for book in book_group:
-                line = extract_book_data(scrap(book), book)
+                line = extract_book_data(scrap(book), book).values()
                 writer.writerow(line)
     print("Votre fichier Excel est prêt")
