@@ -1,9 +1,11 @@
 import re
 import csv
 import requests
+import os
 from bs4 import BeautifulSoup
 from datetime import date
 from urllib.parse import urljoin
+import urllib.request
 
 
 def scrap(url_link):
@@ -11,7 +13,7 @@ def scrap(url_link):
     if not response.ok:
         return print("Error : Wrong URL")
     else:
-        soup_response = BeautifulSoup(response.text, 'html.parser')
+        soup_response = BeautifulSoup(response.text.encode('utf-8'), 'html.parser')
         return soup_response
 
 
@@ -28,6 +30,36 @@ def transform_url(base_url, relative_url):
     book_name = parts[3]
     final_url = urljoin(base_url, f'/catalogue/{book_name}/index.html')
     return final_url
+
+
+def transform_image_url(base_url, relative_url):
+    parts = relative_url.split('/')
+    book_name = parts[3]
+    final_url = urljoin(base_url, relative_url)
+    return final_url
+
+
+def download_images(book_data):
+    for book in book_data:
+        category = book['category']
+        image_url = transform_image_url('https://books.toscrape.com', book['image_url'])
+        image_name = book['title']
+        category_folder = os.path.join("Images", category)
+
+        if not os.path.exists(category_folder):
+            os.makedirs(category_folder)
+
+        if not image_name.endswith(('.jpg', '.jpeg', '.png', '.gif')):
+            image_name += '.jpg'
+
+        image_path = os.path.join(category_folder, image_name)
+
+        try:
+            print(image_url)
+            urllib.request.urlretrieve(image_url, image_path)
+            print(f"Image téléchargée : {image_name}")
+        except Exception as e:
+            print(f"Erreur lors du téléchargement de l'image {image_name}: {e}")
 
 
 def extract_book_data(soup, url):
@@ -67,7 +99,7 @@ def extract_book_data(soup, url):
         'product_description': product_description,
         'category': category,
         'review_rating': review_rating,
-        'image_url': image_url
+        'image_url': image_url,
     }
     print("Scrap de " + book_data_dict['title'] + " terminé.")
     books.append(book_data_dict)
@@ -135,9 +167,8 @@ for cat in cat_links:
     all_books_in_this_cat.append(books_links)
     cat_books.append(all_books_in_this_cat)
 
+
 # CSV part
-
-
 today = str(date.today())
 
 for categories in cat_books:
@@ -153,3 +184,5 @@ for categories in cat_books:
                 line = extract_book_data(scrap(book), book).values()
                 writer.writerow(line)
     print("Votre fichier Excel est prêt")
+
+download_images(books)
