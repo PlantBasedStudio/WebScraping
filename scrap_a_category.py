@@ -20,7 +20,6 @@ url = "https://books.toscrape.com/catalogue/category/books/historical-fiction_4/
 
 books = []
 
-
 def extract_book_data(soup, url):
     print("Scrap d'un livre")
     items = {}

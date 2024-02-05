@@ -43,7 +43,7 @@ def download_images(book_data):
     for book in book_data:
         category = book['category']
         image_url = transform_image_url('https://books.toscrape.com', book['image_url'])
-        image_name = book['title']
+        image_name = re.sub(r'[^\w\s]', '_', book['title'])
         category_folder = os.path.join("Images", category)
 
         if not os.path.exists(category_folder):
