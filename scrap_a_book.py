@@ -3,15 +3,8 @@ import csv
 import requests
 from bs4 import BeautifulSoup
 from datetime import date
+from tools import tools
 
-
-def scrap(url_link):
-    response = requests.get(url_link)
-    if not response.ok:
-        return print("Error : Wrong URL")
-    else:
-        soup_response = BeautifulSoup(response.text, 'html.parser')
-        return soup_response
 
 
 url = 'https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html'
@@ -20,6 +13,10 @@ items = {}
 
 
 def extract_book_data(soup):
+    """
+        Send a book page to return all the info you need about it
+        :send_book_page:
+        """
     trs = soup.find_all('tr')
     for tr in trs:
         th = tr.find('th')
@@ -32,7 +29,8 @@ def extract_book_data(soup):
     title = soup.find('h1').string
     price_including_tax = items['Price (incl. tax)']
     price_excluding_tax = items['Price (excl. tax)']
-    number_available = items['Availability']
+    number_available = tools.transform_stock(items['Availability'])
+    print(number_available)
     if soup.find('div', id="product_description"):
         product_description_div = soup.find('div', id="product_description")
         product_description = product_description_div.find_next_sibling('p').string
@@ -56,11 +54,10 @@ def extract_book_data(soup):
         'review_rating': review_rating,
         'image_url': image_url
     }
-
     return book_data_dict
 
 
-soup_data = scrap(url)
+soup_data = tools.scrap(url)
 book_data = extract_book_data(soup_data)
 
 # CSV part
@@ -72,3 +69,5 @@ with open(book_data['title'].replace(" ", "_") + "_" + today + "_data.csv", "w",
     writer = csv.writer(file_csv, delimiter=",")
     datas = [header, line]
     writer.writerows(datas)
+
+print("Fichier excel ready !")
